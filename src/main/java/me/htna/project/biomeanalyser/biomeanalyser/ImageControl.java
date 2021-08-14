@@ -1,9 +1,10 @@
 package me.htna.project.biomeanalyser.biomeanalyser;
 
+import com.flowpowered.math.vector.Vector3i;
 import lombok.Builder;
-import lombok.Getter;
 import lombok.var;
 import me.htna.project.biomeanalyser.biomeanalyser.Entity.BiomeInfo;
+import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkInfo;
 import org.spongepowered.api.world.biome.BiomeType;
 
 import javax.imageio.ImageIO;
@@ -13,14 +14,14 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ImageControl {
 
     private String outputPath;
-
-    private Map<String, List<BiomeInfo>> infos;
 
     private int width;
 
@@ -35,21 +36,18 @@ public class ImageControl {
                         int width,
                         int height,
                         int offsetX,
-                        int offsetY,
-                        Map<String, List<BiomeInfo>> infos) {
+                        int offsetY) {
 
         this.outputPath = path;
         this.width = width;
         this.height = height;
         this.offsetX = offsetX;
         this.offsetY = offsetY;
-        this.infos = infos;
     }
 
-    public boolean save() {
+    public boolean save(Map<String, List<BiomeInfo>> infos) {
 
         var logger = BiomeAnalyser.getInstance().getLogger();
-        logger.info("CheckPoint 05");
         infos.forEach((k, v) -> {
             try {
                 logger.info(
@@ -57,21 +55,9 @@ public class ImageControl {
                         width, height, k, offsetX, offsetY)
                 );
                 BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                Graphics2D g = img.createGraphics();
-                g.setColor(Color.RED);
-
                 for (BiomeInfo b : v) {
-                    g.drawRect(b.getX() + offsetX, b.getZ() + offsetY, 1, 1);
+                    img.setRGB(b.getX() + offsetX, b.getZ() + offsetY, Color.RED.getRGB());
                 }
-                    /*
-                v.stream().forEach(info -> {
-                    StringBuffer sb2 = new StringBuffer()
-                            .append("drawRect x: ").append(info.getX()).append(", z: ").append(info.getZ())
-                            .append(", image x: ").append(info.getX() + offsetX).append(", image y: ").append(info.getZ() + offsetY);
-                    logger.debug(sb2.toString());
-                    g.drawRect(info.getX() + offsetX, info.getZ() + offsetY, 1, 1);
-                });
-                     */
 
                 Path path = Paths.get(outputPath, k + ".png");
                 File file = path.toFile();
@@ -89,6 +75,53 @@ public class ImageControl {
         });
 
         return true;
+    }
+
+    /**
+     * 이미지 픽셀로부터 바이옴 정보를 읽습니다.
+     * 픽셀의 알파값이 128 이상일 때 바이옴 정보를 적용합니다.
+     *
+     * @param path 이미지 경로
+     * @param type 바이옴 타입
+     * @return 바이옴 정보를 포함하고있는 청크 정보 리스트
+     */
+    public Optional<List<ChunkInfo>> load(Path path, BiomeType type) {
+        File file = path.toFile();
+        if (!file.exists() || !file.isFile())
+            return Optional.empty();
+
+        List<ChunkInfo> chunkInfos = new ArrayList<>();
+        try {
+            BufferedImage img = ImageIO.read(file);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    Color color = new Color(img.getRGB(x, y));
+                    int alpha = color.getAlpha();
+                    if (alpha < 128)
+                        continue;
+
+                    int bx = x - offsetX;
+                    int bz = y - offsetY;
+                    BiomeInfo info = new BiomeInfo(type, bx, bz);
+                    Vector3i cpos = ChunkInfo.coordinateToChunkPos(bx, bz);
+                    ChunkInfo chunk = null;
+                    Optional<ChunkInfo> optChunk = chunkInfos.stream().filter(c -> c.getCx() == cpos.getX() && c.getCz() == cpos.getZ()).findFirst();
+                    if (!optChunk.isPresent()) {
+                        chunk = new ChunkInfo(cpos);
+                        chunkInfos.add(chunk);
+                    } else {
+                        chunk = optChunk.get();
+                    }
+                    chunk.addBiomeInfo(info);
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+
+        return Optional.of(chunkInfos);
     }
 
 }

@@ -3,7 +3,7 @@ package me.htna.project.biomeanalyser.biomeanalyser.Commands;
 import com.flowpowered.math.vector.Vector3i;
 import me.htna.project.biomeanalyser.biomeanalyser.AnalyseManager;
 import me.htna.project.biomeanalyser.biomeanalyser.Commands.customargs.Vector3iCommandElement;
-import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkPosition;
+import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkInfo;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -53,8 +53,8 @@ public class PosCommand extends BaseCommand {
         Vector3i pos1 = optPos1.get();
         Vector3i pos2 = optPos2.get();
 
-        ChunkPosition cpos1 = ChunkPosition.fromBlock(pos1);
-        ChunkPosition cpos2 = ChunkPosition.fromBlock(pos2);
+        ChunkInfo cpos1 = ChunkInfo.fromBlock(pos1);
+        ChunkInfo cpos2 = ChunkInfo.fromBlock(pos2);
 
         AnalyseManager manager = AnalyseManager.getInstance();
         if (!manager.isOwner(p)) {

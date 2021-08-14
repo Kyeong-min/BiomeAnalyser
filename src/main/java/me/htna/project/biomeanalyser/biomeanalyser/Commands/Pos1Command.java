@@ -2,7 +2,7 @@ package me.htna.project.biomeanalyser.biomeanalyser.Commands;
 
 import com.flowpowered.math.vector.Vector3i;
 import me.htna.project.biomeanalyser.biomeanalyser.AnalyseManager;
-import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkPosition;
+import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkInfo;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -50,7 +50,7 @@ public class Pos1Command extends BaseCommand{
             return CommandResult.empty();
         }
 
-        ChunkPosition cpos = ChunkPosition.fromChunk(chunk.get());
+        ChunkInfo cpos = ChunkInfo.fromChunk(chunk.get());
         manager.setWorld(world);
         manager.setCpos1(cpos);
 

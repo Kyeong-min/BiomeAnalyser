@@ -3,26 +3,23 @@ package me.htna.project.biomeanalyser.biomeanalyser;
 import com.flowpowered.math.vector.Vector3d;
 import com.flowpowered.math.vector.Vector3i;
 import me.htna.project.biomeanalyser.biomeanalyser.Entity.BiomeInfo;
-import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkPosition;
+import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkInfo;
+import org.slf4j.Logger;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.util.Tuple;
-import org.spongepowered.api.world.Chunk;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.biome.BiomeType;
 
+import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class Analyser {
 
     private Map<String, List<BiomeInfo>> infos;
 
-    ChunkPosition ltC;
-    ChunkPosition rbC;
-
-    private int offsetToZeroX;
-    private int offsetToZeroZ;
+    ChunkInfo ltC;
+    ChunkInfo rbC;
 
     /**
      * 청크의 바이옴 정보를 분석합니다.
@@ -31,7 +28,7 @@ public class Analyser {
      * @param cp 청크의 좌표
      * @return
      */
-    public boolean analyseBiomeInChunk(Player player, World world, ChunkPosition cp) {
+    public boolean analyseBiomeInChunk(Player player, World world, ChunkInfo cp) {
         Vector3i lt = cp.getLTBlockCoordinate();
         Vector3i rb = cp.getRBBlockCoordinate();
         int ltX = lt.getX();
@@ -64,8 +61,6 @@ public class Analyser {
 
     public Analyser() {
         infos = null;
-        offsetToZeroX = 0;
-        offsetToZeroZ = 0;
     }
 
     /**
@@ -76,21 +71,21 @@ public class Analyser {
      * @param cpos1 첫번째 청크 좌표
      * @param cpos2 두번째 청크 좌표
      */
-    public void analyse(Player player, World world, ChunkPosition cpos1, ChunkPosition cpos2) {
+    public void analyse(Player player, World world, ChunkInfo cpos1, ChunkInfo cpos2) {
         int ltX = Math.min(cpos1.getCx(), cpos2.getCx());
         int ltZ = Math.min(cpos1.getCz(), cpos2.getCz());
         int rbX = Math.max(cpos1.getCx(), cpos2.getCx());
         int rbZ = Math.max(cpos1.getCz(), cpos2.getCz());
 
-        ltC = new ChunkPosition(ltX, ltZ);
-        rbC = new ChunkPosition(rbX, rbZ);
+        ltC = new ChunkInfo(ltX, ltZ);
+        rbC = new ChunkInfo(rbX, rbZ);
 
         BiomeAnalyser.getInstance().getLogger().info(String.format("Start analyse, (%s / %s)", ltC, rbC));
 
         infos = new HashMap<>();
         for (int cz = ltZ; cz <= rbZ; cz++) {
             for (int cx = ltX; cx <= rbX; cx++) {
-                analyseBiomeInChunk(player, world, new ChunkPosition(cx, cz));
+                analyseBiomeInChunk(player, world, new ChunkInfo(cx, cz));
             }
         }
     }
@@ -126,32 +121,67 @@ public class Analyser {
     }
 
     public boolean write() {
-        if (infos == null)
+        if (infos == null) {
+            BiomeAnalyser.getInstance().getLogger().info(String.format("Biome info list null"));
             return false;
+        }
 
-        Path path = Paths.get(BiomeAnalyser.getInstance().getGame().getGameDirectory().toString(),
-                "BiomeAnalyser");
-
+        Path path = BiomeAnalyser.getInstance().getOutputPath();
         BiomeAnalyser.getInstance().getLogger().info(String.format("Save path: %s", path));
 
         Vector3i ltBlockPos = ltC.getLTBlockCoordinate();
         Vector3i rbBlockPos = rbC.getRBBlockCoordinate();
 
-        offsetToZeroX = -ltC.getLTBlockCoordinate().getX();
-        offsetToZeroZ = -ltC.getLTBlockCoordinate().getZ();
+        int offsetToZeroX = -ltC.getLTBlockCoordinate().getX();
+        int offsetToZeroZ = -ltC.getLTBlockCoordinate().getZ();
 
         ImageControl control = new ImageControl.ImageControlBuilder()
-                .infos(infos)
                 .width((rbBlockPos.getX() - ltBlockPos.getX()+1))
                 .height((rbBlockPos.getZ() - ltBlockPos.getZ()+1))
                 .offsetX(offsetToZeroX)
                 .offsetY(offsetToZeroZ)
                 .path(path.toString())
                 .build();
-        BiomeAnalyser.getInstance().getLogger().info("CheckPoint 04");
-        if (control.save())
+        if (control.save(infos))
             return true;
 
         return false;
+    }
+
+    public boolean read(Player p, Path path, World world, BiomeType type) {
+        Logger logger = BiomeAnalyser.getInstance().getLogger();
+        logger.info(String.format("Load path: %s", path));
+        File file = path.toFile();
+        if (!file.exists() || !file.isFile())
+            return false;
+
+        Vector3i ltBlockPos = ltC.getLTBlockCoordinate();
+        Vector3i rbBlockPos = rbC.getRBBlockCoordinate();
+
+        int offsetToZeroX = -ltC.getLTBlockCoordinate().getX();
+        int offsetToZeroZ = -ltC.getLTBlockCoordinate().getZ();
+
+        ImageControl control = new ImageControl.ImageControlBuilder()
+                .width((rbBlockPos.getX() - ltBlockPos.getX()+1))
+                .height((rbBlockPos.getZ() - ltBlockPos.getZ()+1))
+                .offsetX(offsetToZeroX)
+                .offsetY(offsetToZeroZ)
+                .build();
+
+        Optional<List<ChunkInfo>> optResult = control.load(path, type);
+        if (!optResult.isPresent())
+            return false;
+
+        List<ChunkInfo> result = optResult.get();
+        for (ChunkInfo info : result) {
+            Vector3i pos = info.getLTBlockCoordinate();
+            p.setLocation(Vector3d.from(pos.getX(), 0, pos.getZ()), world.getUniqueId());
+            List<BiomeInfo> biomeInfos = info.getBiomeInfoList();
+            for (BiomeInfo biomeInfo : biomeInfos) {
+                world.setBiome(biomeInfo.getX(), 0, biomeInfo.getZ(), type);
+            }
+        }
+
+        return true;
     }
 }

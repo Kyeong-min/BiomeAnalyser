@@ -1,25 +1,29 @@
 package me.htna.project.biomeanalyser.biomeanalyser.Commands;
 
-import lombok.var;
 import me.htna.project.biomeanalyser.biomeanalyser.AnalyseManager;
+import me.htna.project.biomeanalyser.biomeanalyser.BiomeAnalyser;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
-public class AnalyseCommand extends BaseCommand {
+public class ApplyCommand extends BaseCommand {
 
-    public final static String SUBPERMISSION = "analyse";
-    public final static String[] ALIAS = {"analyse", "a"};
+    public final static String SUBPERMISSION = "apply";
+    public final static String[] ALIAS = {"apply"};
 
-    public AnalyseCommand() {
-        super(ALIAS, "바이옴 상태를 분석합니다.", SUBPERMISSION);
+    public ApplyCommand() {
+        super(ALIAS, "Apply biome from image", SUBPERMISSION);
     }
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
+        BiomeAnalyser.getInstance().getLogger().info("Apply command");
+
         if (!isPlayerSource(src)) {
             src.sendMessage(Text.of("This command is player only."));
             return CommandResult.empty();
@@ -32,21 +36,14 @@ public class AnalyseCommand extends BaseCommand {
             return CommandResult.empty();
         }
 
-        if (!manager.getWorld().equals(player.getWorld())) {
-            src.sendMessage(Text.of("바이옴 분포를 분석할 월드로 이동 후에 명령을 실행해주세요."));
+        Location<World> loc = player.getLocation();
+        if (!manager.loadImage(player)) {
+            src.sendMessage(Text.of("실패했습니다."));
             return CommandResult.empty();
         }
-
-        manager.analyse(player);
-        player.sendMessage(Text.of("분석 완료."));
-
-        var optList = manager.getBiomeTypeList();
-        optList.ifPresent(list -> {
-            list.stream().forEach(t -> {
-                player.sendMessage(Text.of(String.format("Type: %s, Count: %d", t.getFirst(), t.getSecond())));
-            });
-        });
-
+        player.setLocation(loc);
+        player.sendMessage(Text.of("적용 완료."));
+        
         return CommandResult.success();
     }
 }

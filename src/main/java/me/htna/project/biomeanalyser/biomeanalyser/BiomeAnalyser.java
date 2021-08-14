@@ -1,5 +1,6 @@
 package me.htna.project.biomeanalyser.biomeanalyser;
 
+import com.flowpowered.noise.module.combiner.Select;
 import com.google.inject.Inject;
 import lombok.Getter;
 import me.htna.project.biomeanalyser.biomeanalyser.Commands.*;
@@ -15,6 +16,11 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Text;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Plugin(
         id = "biomeanalyser",
@@ -51,6 +57,9 @@ public class BiomeAnalyser {
                 .child(new LockCommand().buildSelf(), LockCommand.ALIAS)
                 .child(new UnlockCommand().buildSelf(), UnlockCommand.ALIAS)
                 .child(new SaveCommand().buildSelf(), SaveCommand.ALIAS)
+                .child(new LoadImageListCommand().buildSelf(), LoadImageListCommand.ALIAS)
+                .child(new SelectCommand().buildSelf(), SelectCommand.ALIAS)
+                .child(new ApplyCommand().buildSelf(), ApplyCommand.ALIAS)
                 .build();
 
         Sponge.getCommandManager().register(this, spec, "biomeanalyser", "ba");
@@ -78,5 +87,28 @@ public class BiomeAnalyser {
             logger.info("Disconnected owner player, force unlock");
             m.unlockForce();
         }
+    }
+
+    public void createFolderIfNotExists(Path path) {
+        if (Files.notExists((path))) {
+            try {
+                Files.createDirectory(path);
+            } catch (IOException e) {
+                logger.error(String.format("Directory create failed: %s", path.toString()));
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public Path getOutputPath() {
+        Path path = Paths.get(game.getGameDirectory().toString(), "BiomeAnalyser");
+        createFolderIfNotExists(path);
+        return path;
+    }
+
+    public Path getInputPath() {
+        Path path = Paths.get(getOutputPath().toString(), "input");
+        createFolderIfNotExists(path);
+        return path;
     }
 }

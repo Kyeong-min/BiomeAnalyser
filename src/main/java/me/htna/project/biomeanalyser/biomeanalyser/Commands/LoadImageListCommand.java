@@ -8,19 +8,22 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 
-public class SaveCommand extends BaseCommand {
+import java.util.List;
 
-    public final static String SUBPERMISSION = "save";
-    public final static String[] ALIAS = {"save"};
+public class LoadImageListCommand extends BaseCommand {
 
-    public SaveCommand() {
-        super(ALIAS, "Save image", SUBPERMISSION);
+    public final static String SUBPERMISSION = "loadimagelist";
+    public final static String[] ALIAS = {"loadimagelist"};
+
+    public LoadImageListCommand() {
+        super(ALIAS, "이미지 목록을 가져옵니다.", SUBPERMISSION);
     }
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        BiomeAnalyser.getInstance().getLogger().info("Save command");
+        BiomeAnalyser.getInstance().getLogger().info("Load image command");
 
         if (!isPlayerSource(src)) {
             src.sendMessage(Text.of("This command is player only."));
@@ -34,8 +37,21 @@ public class SaveCommand extends BaseCommand {
             return CommandResult.empty();
         }
 
-        manager.saveAsync();
-        src.sendMessage(Text.of("바이옴 정보 쓰기 시작"));
+        p.sendMessage(Text.of("이미지 목록"));
+        if (!manager.loadImageList()) {
+            p.sendMessage(Text.of("이미지 목록 읽어오기 실패"));
+            return CommandResult.empty();
+        }
+        List<String> list = manager.getFileList();
+
+        int i = 0;
+        for(String name: list) {
+            // #n 파일명
+            Text.Builder builder = Text.builder(String.format("#%d - %s", i++, name))
+                    .onClick(TextActions.runCommand(String.format("ba select %d", i)));
+            p.sendMessage(builder.build());
+        }
+
         return CommandResult.success();
     }
 }
