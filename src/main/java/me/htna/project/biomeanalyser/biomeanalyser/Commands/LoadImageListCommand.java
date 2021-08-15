@@ -8,7 +8,6 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.action.TextActions;
 
 import java.util.List;
 
@@ -47,9 +46,7 @@ public class LoadImageListCommand extends BaseCommand {
         int i = 0;
         for(String name: list) {
             // #n 파일명
-            Text.Builder builder = Text.builder(String.format("#%d - %s", i++, name))
-                    .onClick(TextActions.runCommand(String.format("ba select %d", i)));
-            p.sendMessage(builder.build());
+            p.sendMessage(Text.of(String.format("#%d - %s", i++, name)));
         }
 
         return CommandResult.success();

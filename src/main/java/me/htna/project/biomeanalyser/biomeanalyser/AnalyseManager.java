@@ -58,11 +58,6 @@ public class AnalyseManager {
      */
     private int selectedIdx;
 
-    /**
-     * 로드한 이미지로 월드에 적용할 바이옴 타입
-     */
-    private BiomeType applyType;
-
     private AnalyseManager() {
         clear();
     }
@@ -74,7 +69,6 @@ public class AnalyseManager {
         analyser = null;
         fileList = null;
         selectedIdx = -1;
-        applyType = null;
     }
 
     public boolean isLocked() {
@@ -183,7 +177,7 @@ public class AnalyseManager {
     }
 
     /**
-     * 월드에 로드할 바이옴 이미지의 인덱스와 바이옴 타입을 설정한다.
+     * 월드에 로드할 바이옴 이미지의 인덱스와 바이옴 타입을 선택하고 이미지를 로드합니다.
      *
      * @param index 이미지의 인덱스
      * @param type 바이옴 타입
@@ -194,7 +188,46 @@ public class AnalyseManager {
             return false;
 
         selectedIdx = index;
-        applyType = type;
+        Path path = Paths.get(BiomeAnalyser.getInstance().getInputPath().toString(), fileList.get(index));
+        boolean result = analyser.read(path, type);
+        var optPlayer = Sponge.getServer().getPlayer(this.owner);
+        if (result) {
+            BiomeAnalyser.getInstance().getLogger().info("Success write");
+            optPlayer.ifPresent(p -> p.sendMessage(Text.of("이미지 로드 성공.")));
+        } else {
+            BiomeAnalyser.getInstance().getLogger().info("Failed write");
+            optPlayer.ifPresent(p -> p.sendMessage(Text.of("이미지 로드 실패.")));
+        }
+
+        return result;
+    }
+
+    /**
+     * 월드에 로드할 바이옴 이미지의 인덱스와 바이옴 타입을 선택하고 이미지를 비동기적으로 로드합니다.
+     *
+     * @param index
+     * @param type
+     * @return
+     */
+    public boolean selectImageAsync(int index, BiomeType type) {
+        if (fileList == null || fileList.size() <= index || index < 0)
+            return false;
+
+        selectedIdx = index;
+        Path path = Paths.get(BiomeAnalyser.getInstance().getInputPath().toString(), fileList.get(index));
+        CompletableFuture.runAsync(() -> {
+            BiomeAnalyser.getInstance().getLogger().info("Read start");
+            boolean result = analyser.read(path, type);
+
+            var optPlayer = Sponge.getServer().getPlayer(this.owner);
+            if (result) {
+                BiomeAnalyser.getInstance().getLogger().info("Success write");
+                optPlayer.ifPresent(p -> p.sendMessage(Text.of("이미지 로드 성공.")));
+            } else {
+                BiomeAnalyser.getInstance().getLogger().info("Failed write");
+                optPlayer.ifPresent(p -> p.sendMessage(Text.of("이미지 로드 실패.")));
+            }
+        });
         return true;
     }
 
@@ -203,8 +236,8 @@ public class AnalyseManager {
      *
      * @return 성공시 true, 이미지가 선택되어있지 않거나 로드에 실패하면 false
      */
-    public boolean loadImage(Player p) {
-        if (selectedIdx == -1 || applyType == null) {
+    public boolean applyBiome(Player p) {
+        if (selectedIdx == -1) {
             return false;
         }
 
@@ -212,9 +245,7 @@ public class AnalyseManager {
         Path path = Paths.get(BiomeAnalyser.getInstance().getInputPath().toString(), imageName);
 
         Location<World> playerLoc = p.getLocation();
-
-        boolean result = analyser.read(p, path, world, applyType);
-
+        boolean result = analyser.apply(p, world);
         p.setLocation(playerLoc);
 
         return result;

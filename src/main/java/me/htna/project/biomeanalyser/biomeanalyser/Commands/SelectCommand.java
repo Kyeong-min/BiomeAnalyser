@@ -31,7 +31,7 @@ public class SelectCommand extends BaseCommand {
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        BiomeAnalyser.getInstance().getLogger().info("Save command");
+        BiomeAnalyser.getInstance().getLogger().info("Select command");
 
         if (!isPlayerSource(src)) {
             src.sendMessage(Text.of("This command is player only."));
@@ -57,12 +57,12 @@ public class SelectCommand extends BaseCommand {
             return CommandResult.empty();
         }
 
-        if (!manager.selectImage(idx.get(), biomeType.get())) {
+        if (!manager.selectImageAsync(idx.get(), biomeType.get())) {
             src.sendMessage(Text.of("파일 선택에 실패했습니다."));
             return CommandResult.empty();
         }
 
-        src.sendMessage(Text.of(String.format("파일이 선택되었습니다. 인덱스: %d, 바이옴 타입: %s", idx.get(), biomeType.get().getName())));
+        src.sendMessage(Text.of(String.format("파일이 선택되었습니다. [%d] - %s, 바이옴 정보를 로드합니다.", idx.get(), biomeType.get().getName())));
         return CommandResult.success();
     }
 }

@@ -14,9 +14,20 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 
+/**
+ * 월드의 바이옴을 분석하거나 바이옴 정보를 월드에 적용합니다.
+ */
 public class Analyser {
 
+    /**
+     * 월드에서 읽어들인 바이옴 정보
+     */
     private Map<String, List<BiomeInfo>> infos;
+
+    /**
+     * 월드에 적용할 바이옴 정보
+     */
+    private List<ChunkInfo> readInfos;
 
     ChunkInfo ltC;
     ChunkInfo rbC;
@@ -61,6 +72,7 @@ public class Analyser {
 
     public Analyser() {
         infos = null;
+        readInfos= null;
     }
 
     /**
@@ -120,6 +132,11 @@ public class Analyser {
         return Optional.ofNullable(infos.keySet().size());
     }
 
+    /**
+     * 월드에서 읽어들인 바이옴 정보를 이미지로 저장합니다.
+     *
+     * @return 성공시 true, 실패시 false
+     */
     public boolean write() {
         if (infos == null) {
             BiomeAnalyser.getInstance().getLogger().info(String.format("Biome info list null"));
@@ -148,12 +165,21 @@ public class Analyser {
         return false;
     }
 
-    public boolean read(Player p, Path path, World world, BiomeType type) {
+    /**
+     * 이미지로부터 바이옴 정보를 읽어들입니다.
+     *
+     * @param path 이미지 경로
+     * @param type 바이옴 타입
+     * @return 성공시 true, 실패시 false
+     */
+    public boolean read(Path path, BiomeType type) {
         Logger logger = BiomeAnalyser.getInstance().getLogger();
         logger.info(String.format("Load path: %s", path));
         File file = path.toFile();
-        if (!file.exists() || !file.isFile())
+        if (!file.exists() || !file.isFile()) {
+            logger.error(String.format("File not exists, %s", file.getAbsolutePath()));
             return false;
+        }
 
         Vector3i ltBlockPos = ltC.getLTBlockCoordinate();
         Vector3i rbBlockPos = rbC.getRBBlockCoordinate();
@@ -161,24 +187,49 @@ public class Analyser {
         int offsetToZeroX = -ltC.getLTBlockCoordinate().getX();
         int offsetToZeroZ = -ltC.getLTBlockCoordinate().getZ();
 
+        int width = rbBlockPos.getX() - ltBlockPos.getX()+1;
+        int height = rbBlockPos.getZ() - ltBlockPos.getZ()+1;
+
+        logger.info(
+                String.format("read biome image, width: %d, height: %d, type: %s, offset x: %d, offset y: %d",
+                        width, height, type.getName(), offsetToZeroX, offsetToZeroZ)
+        );
+
         ImageControl control = new ImageControl.ImageControlBuilder()
-                .width((rbBlockPos.getX() - ltBlockPos.getX()+1))
-                .height((rbBlockPos.getZ() - ltBlockPos.getZ()+1))
+                .width(width)
+                .height(rbBlockPos.getZ() - ltBlockPos.getZ()+1)
                 .offsetX(offsetToZeroX)
                 .offsetY(offsetToZeroZ)
                 .build();
 
         Optional<List<ChunkInfo>> optResult = control.load(path, type);
-        if (!optResult.isPresent())
+        if (!optResult.isPresent()) {
+            logger.error("Invalid chunk info from image");
+            return false;
+        }
+        readInfos = optResult.get();
+        logger.error(String.format("Success chunk info from image, count: %d", readInfos.size()));
+        return true;
+    }
+
+    /**
+     * 읽어들인 바이옴 정보를 월드에 적용합니다.
+     *
+     * @param p 플레이어
+     * @param world 적용할 월드
+     * @return 성공시 true, 실패시 false
+     */
+    public boolean apply(Player p, World world) {
+        if (readInfos == null)
             return false;
 
-        List<ChunkInfo> result = optResult.get();
+        List<ChunkInfo> result = readInfos;
         for (ChunkInfo info : result) {
             Vector3i pos = info.getLTBlockCoordinate();
             p.setLocation(Vector3d.from(pos.getX(), 0, pos.getZ()), world.getUniqueId());
             List<BiomeInfo> biomeInfos = info.getBiomeInfoList();
             for (BiomeInfo biomeInfo : biomeInfos) {
-                world.setBiome(biomeInfo.getX(), 0, biomeInfo.getZ(), type);
+                world.setBiome(biomeInfo.getX(), 0, biomeInfo.getZ(), biomeInfo.getType());
             }
         }
 

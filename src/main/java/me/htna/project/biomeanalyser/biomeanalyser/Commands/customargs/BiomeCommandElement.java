@@ -9,7 +9,6 @@ import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.biome.BiomeType;
 import org.spongepowered.api.world.biome.BiomeTypes;
-import org.spongepowered.api.world.gen.BiomeGenerator;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -19,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 
 public class BiomeCommandElement extends CommandElement {
-
 
     private static Map<String, BiomeType> biomeNameList;
 
@@ -33,7 +31,7 @@ public class BiomeCommandElement extends CommandElement {
 
         if (biomeNameList == null) {
             try {
-                biomeNameList = new HashMap<String, BiomeType>();
+                biomeNameList = new HashMap<>();
                 Field[] fields = BiomeTypes.class.getFields();
                 for (Field field : fields) {
                     BiomeType type = (BiomeType)field.get(null);

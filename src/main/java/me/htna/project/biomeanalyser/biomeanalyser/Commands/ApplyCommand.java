@@ -37,10 +37,11 @@ public class ApplyCommand extends BaseCommand {
         }
 
         Location<World> loc = player.getLocation();
-        if (!manager.loadImage(player)) {
+        if (!manager.applyBiome(player)) {
             src.sendMessage(Text.of("실패했습니다."));
             return CommandResult.empty();
         }
+        
         player.setLocation(loc);
         player.sendMessage(Text.of("적용 완료."));
         

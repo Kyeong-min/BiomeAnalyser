@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.var;
 import me.htna.project.biomeanalyser.biomeanalyser.Entity.BiomeInfo;
 import me.htna.project.biomeanalyser.biomeanalyser.Entity.ChunkInfo;
+import org.slf4j.Logger;
 import org.spongepowered.api.world.biome.BiomeType;
 
 import javax.imageio.ImageIO;
@@ -86,16 +87,23 @@ public class ImageControl {
      * @return 바이옴 정보를 포함하고있는 청크 정보 리스트
      */
     public Optional<List<ChunkInfo>> load(Path path, BiomeType type) {
+        Logger logger = BiomeAnalyser.getInstance().getLogger();
+        logger.debug("ImageControl#load");
+
         File file = path.toFile();
-        if (!file.exists() || !file.isFile())
+        if (!file.exists() || !file.isFile()) {
+            logger.info(String.format("Invalid path, path: %s", path));
             return Optional.empty();
+        }
+
+        logger.info(String.format("Read image, path: %s, type: %s", path, type.getName()));
 
         List<ChunkInfo> chunkInfos = new ArrayList<>();
         try {
             BufferedImage img = ImageIO.read(file);
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
-                    Color color = new Color(img.getRGB(x, y));
+                    Color color = new Color(img.getRGB(x, y), true);
                     int alpha = color.getAlpha();
                     if (alpha < 128)
                         continue;
@@ -104,7 +112,7 @@ public class ImageControl {
                     int bz = y - offsetY;
                     BiomeInfo info = new BiomeInfo(type, bx, bz);
                     Vector3i cpos = ChunkInfo.coordinateToChunkPos(bx, bz);
-                    ChunkInfo chunk = null;
+                    ChunkInfo chunk;
                     Optional<ChunkInfo> optChunk = chunkInfos.stream().filter(c -> c.getCx() == cpos.getX() && c.getCz() == cpos.getZ()).findFirst();
                     if (!optChunk.isPresent()) {
                         chunk = new ChunkInfo(cpos);
@@ -115,11 +123,13 @@ public class ImageControl {
                     chunk.addBiomeInfo(info);
                 }
             }
-
         } catch (IOException e) {
+            logger.error("Read image exception occur");
             e.printStackTrace();
             return Optional.empty();
         }
+
+        logger.info(String.format("Read image success, chunk count: %d", chunkInfos.size()));
 
         return Optional.of(chunkInfos);
     }
