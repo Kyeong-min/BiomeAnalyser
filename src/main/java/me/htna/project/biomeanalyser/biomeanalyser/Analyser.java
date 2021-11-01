@@ -204,11 +204,12 @@ public class Analyser {
 
         Optional<List<ChunkInfo>> optResult = control.load(path, type);
         if (!optResult.isPresent()) {
-            logger.error("Invalid chunk info from image");
+            logger.error("Failed read biome info from image");
             return false;
         }
+
         readInfos = optResult.get();
-        logger.error(String.format("Success chunk info from image, count: %d", readInfos.size()));
+        logger.error(String.format("Success read biome info from image, count: %d", readInfos.size()));
         return true;
     }
 
@@ -225,9 +226,12 @@ public class Analyser {
 
         List<ChunkInfo> result = readInfos;
         for (ChunkInfo info : result) {
+            List<BiomeInfo> biomeInfos = info.getBiomeInfoList();
+            if (biomeInfos.isEmpty())
+                continue;
+
             Vector3i pos = info.getLTBlockCoordinate();
             p.setLocation(Vector3d.from(pos.getX(), 0, pos.getZ()), world.getUniqueId());
-            List<BiomeInfo> biomeInfos = info.getBiomeInfoList();
             for (BiomeInfo biomeInfo : biomeInfos) {
                 world.setBiome(biomeInfo.getX(), 0, biomeInfo.getZ(), biomeInfo.getType());
             }

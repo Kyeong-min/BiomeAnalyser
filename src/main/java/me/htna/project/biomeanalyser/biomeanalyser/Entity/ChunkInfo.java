@@ -95,12 +95,12 @@ public class ChunkInfo {
     /**
      * 청크 좌표를 설정합니다.
      *
-     * @param x 청크의 X좌표
-     * @param z 청크의 Z좌표
+     * @param cx 청크의 X좌표
+     * @param cz 청크의 Z좌표
      */
-    public void setPosition(int x, int z) {
-        this.cx = x;
-        this.cz = z;
+    public void setPosition(int cx, int cz) {
+        this.cx = cx;
+        this.cz = cz;
     }
 
     /**
